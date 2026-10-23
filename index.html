@@ -1,0 +1,159 @@
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全验证</title>
+<style>
+{ box-sizing: border-box; }
+body {
+margin: 0; min-height: 100vh; display: grid; place-items: center;
+padding: 20px; background: #f3f5f8;
+font-family: Arial, sans-serif; color: #222;
+}
+.card {
+width: 100%; max-width: 360px; padding: 24px;
+background: white; border-radius: 16px;
+box-shadow: 0 8px 30px #0001;
+}
+h2 { margin: 0 0 10px; }
+p { color: #666; font-size: 14px; line-height: 1.6; }
+canvas { width: 100%; display: block; border-radius: 8px; }
+#slider { width: 100%; margin: 16px 0; accent-color: #1677ff; }
+#status { min-height: 24px; font-size: 14px; }
+button {
+  width: 100%; padding: 13px; border: 0; border-radius: 8px;
+  color: white; background: #1677ff; font-size: 16px;
+}
+button:disabled { background: #aab5c5; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>安全验证</h2>
+  <p>请将拼图拖到图片中的正确位置。</p>
+  <canvas id="puzzle" width="320" height="180"></canvas>
+  
+  <div id="status">正在加载图片…</div>
+  <button id="go" disabled>验证后继续</button>
+</div>
+<script>
+// = 只修改这里：填写你的目的链接 =
+const TARGET_URL = "https://www.ep88-my.com/en-my/?affcode=AFF-RJNAJECH";
+// 随机主题图片，无需手动填写图片地址
+const THEMES = [
+  "flowers", "animals", "nature", "cats",
+  "dogs", "birds", "wildlife", "garden"
+];
+// 图片由公开图片服务提供；刷新页面会随机选择主题和图片
+const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+const imageURL =
+  "https://loremflickr.com/640/360/" + theme + "?lock=" +
+  Math.floor(Math.random() * 1000000);
+const canvas = document.getElementById("puzzle");
+const ctx = canvas.getContext("2d");
+const slider = document.getElementById("slider");
+const status = document.getElementById("status");
+const go = document.getElementById("go");
+const W = 320, H = 180, S = 42;
+let img = new Image();
+let targetX = 0, pieceX = 0, targetY = 60;
+let loaded = false, verified = false, targetURL;
+try {
+  targetURL = new URL(TARGET_URL);
+  if (!["https:", "http:"].includes(targetURL.protocol)) {
+    throw new Error("Invalid URL");
+  }
+} catch {
+  status.textContent = "请在代码中填写正确的目的链接。";
+  slider.disabled = true;
+}
+function path(c, x, y) {
+  c.beginPath();
+  c.moveTo(x, y);
+  c.lineTo(x + 12, y);
+  c.arc(x + 21, y, 9, Math.PI, 0, true);
+  c.lineTo(x + S, y);
+  c.lineTo(x + S, y + 12);
+  c.arc(x + S, y + 21, 9, -Math.PI / 2, Math.PI / 2, true);
+  c.lineTo(x + S, y + S);
+  c.lineTo(x + 12, y + S);
+  c.lineTo(x + 12, y + 30);
+  c.arc(x + 12, y + 21, 9, Math.PI / 2, -Math.PI / 2, true);
+  c.closePath();
+}
+function draw() {
+  if (!loaded) return;
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H);
+  // 目标拼图位置
+  ctx.save();
+  path(ctx, targetX, targetY);
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  path(ctx, targetX, targetY);
+  ctx.strokeStyle = "white";
+  ctx.setLineDash([4, 3]);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  // 当前滑动拼图
+  ctx.save();
+  path(ctx, pieceX, targetY);
+  ctx.clip();
+  ctx.drawImage(img, pieceX - targetX, 0, W, H);
+  ctx.restore();
+  ctx.save();
+  path(ctx, pieceX, targetY);
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+function loadImage() {
+  loaded = false;
+  verified = false;
+  go.disabled = true;
+  slider.disabled = false;
+  slider.value = 0;
+  pieceX = 0;
+  status.style.color = "#555";
+  status.textContent = "正在加载随机图片…";
+  img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    targetX = 175 + Math.random() * 45;
+    loaded = true;
+    draw();
+    status.textContent = "请拖动滑块完成拼图。";
+  };
+  img.onerror = () => {
+    status.textContent = "图片暂时无法加载，请刷新页面重试。";
+  };
+  img.src = imageURL;
+}
+slider.addEventListener("input", () => {
+  if (!loaded || verified) return;
+  pieceX = Number(slider.value);
+  draw();
+  if (Math.abs(pieceX - targetX) <= 5) {
+    verified = true;
+    status.textContent = "OK！验证成功。";
+    status.style.color = "#16803d";
+    slider.disabled = true;
+    go.disabled = false;
+  } else {
+    status.textContent = "请继续调整拼图位置。";
+  }
+});
+go.addEventListener("click", () => {
+  if (verified && targetURL) {
+    window.location.assign(targetURL.href);
+  }
+});
+loadImage();
+</script>
+</body>
+</html>
