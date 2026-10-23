@@ -3,157 +3,208 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>安全验证</title>
+<title>拼图页面</title>
 <style>
 { box-sizing: border-box; }
 body {
-margin: 0; min-height: 100vh; display: grid; place-items: center;
-padding: 20px; background: #f3f5f8;
-font-family: Arial, sans-serif; color: #222;
+margin: 0; min-height: 100vh; padding: 20px;
+display: flex; justify-content: center; align-items: center;
+background: #f2f4f7; font-family: Arial, sans-serif;
 }
 .card {
-width: 100%; max-width: 360px; padding: 24px;
+width: 100%; max-width: 400px; padding: 24px;
 background: white; border-radius: 16px;
 box-shadow: 0 8px 30px #0001;
 }
-h2 { margin: 0 0 10px; }
-p { color: #666; font-size: 14px; line-height: 1.6; }
-canvas { width: 100%; display: block; border-radius: 8px; }
-#slider { width: 100%; margin: 16px 0; accent-color: #1677ff; }
-#status { min-height: 24px; font-size: 14px; }
+h2 { margin-top: 0; }
+p { color: #666; font-size: 14px; }
+canvas { width: 100%; height: auto; display: block; border-radius: 8px; }
+input { width: 100%; margin: 18px 0; }
 button {
-  width: 100%; padding: 13px; border: 0; border-radius: 8px;
-  color: white; background: #1677ff; font-size: 16px;
+width: 100%; padding: 13px; border: 0; border-radius: 8px;
+background: #1677ff; color: white; font-size: 16px;
 }
 button:disabled { background: #aab5c5; }
+#status { min-height: 22px; font-size: 14px; }
 </style>
 </head>
 <body>
 <div class="card">
   <h2>安全验证</h2>
-  <p>请将拼图拖到图片中的正确位置。</p>
-  <canvas id="puzzle" width="320" height="180"></canvas>
+  <p>请将拼图拖到图片中对应的位置。</p>
+  <canvas id="c" width="320" height="180"></canvas>
   
-  <div id="status">正在加载图片…</div>
+  <div id="status">请拖动滑块完成拼图。</div>
   <button id="go" disabled>验证后继续</button>
 </div>
 <script>
-// = 只修改这里：填写你的目的链接 =
+// 只修改这里，换成你自己的目的网址
 const TARGET_URL = "https://www.ep88-my.com/en-my/?affcode=AFF-RJNAJECH";
-// 随机主题图片，无需手动填写图片地址
-const THEMES = [
-  "flowers", "animals", "nature", "cats",
-  "dogs", "birds", "wildlife", "garden"
-];
-// 图片由公开图片服务提供；刷新页面会随机选择主题和图片
-const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
-const imageURL =
-  "https://loremflickr.com/640/360/" + theme + "?lock=" +
-  Math.floor(Math.random() * 1000000);
-const canvas = document.getElementById("puzzle");
-const ctx = canvas.getContext("2d");
-const slider = document.getElementById("slider");
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+const slider = document.getElementById("s");
 const status = document.getElementById("status");
 const go = document.getElementById("go");
 const W = 320, H = 180, S = 42;
-let img = new Image();
-let targetX = 0, pieceX = 0, targetY = 60;
-let loaded = false, verified = false, targetURL;
-try {
-  targetURL = new URL(TARGET_URL);
-  if (!["https:", "http:"].includes(targetURL.protocol)) {
-    throw new Error("Invalid URL");
+let targetX = 190;
+let pieceX = 0;
+let verified = false;
+function flower(x, y, r, color) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a)r.65,
+            y + Math.sin(a)r.65,
+            r*.4, 0, Math.PI2);
+    ctx.fill();
   }
-} catch {
-  status.textContent = "请在代码中填写正确的目的链接。";
-  slider.disabled = true;
+  ctx.fillStyle = "#f4c542";
+  ctx.beginPath();
+  ctx.arc(x, y, r.3, 0, Math.PI*2);
+  ctx.fill();
 }
-function path(c, x, y) {
-  c.beginPath();
-  c.moveTo(x, y);
-  c.lineTo(x + 12, y);
-  c.arc(x + 21, y, 9, Math.PI, 0, true);
-  c.lineTo(x + S, y);
-  c.lineTo(x + S, y + 12);
-  c.arc(x + S, y + 21, 9, -Math.PI / 2, Math.PI / 2, true);
-  c.lineTo(x + S, y + S);
-  c.lineTo(x + 12, y + S);
-  c.lineTo(x + 12, y + 30);
-  c.arc(x + 12, y + 21, 9, Math.PI / 2, -Math.PI / 2, true);
-  c.closePath();
+function background() {
+  // 天空
+  let g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#9dddf5");
+  g.addColorStop(1, "#e8f8ff");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  // 太阳
+  ctx.fillStyle = "#ffdc73";
+  ctx.beginPath();
+  ctx.arc(260, 35, 19, 0, Math.PI*2);
+  ctx.fill();
+  // 云朵
+  ctx.fillStyle = "#fff";
+  [[45,35],[70,29],[91,37],[145,49],[165,43],[183,51]]
+    .forEach(([x,y]) => {
+      ctx.beginPath();
+      ctx.arc(x,y,12,0,Math.PI*2);
+      ctx.fill();
+    });
+  // 远处山丘
+  ctx.fillStyle = "#8fcca0";
+  ctx.beginPath();
+  ctx.moveTo(0,115);
+  ctx.quadraticCurveTo(85,60,160,117);
+  ctx.quadraticCurveTo(245,62,320,108);
+  ctx.lineTo(320,180);
+  ctx.lineTo(0,180);
+  ctx.fill();
+  // 草地
+  ctx.fillStyle = "#54ad68";
+  ctx.fillRect(0,132,W,48);
+  // 花朵
+  flower(48,145,10,"#ff8cb6");
+  flower(91,160,9,"#fff");
+  flower(142,144,10,"#c5a0ff");
+  flower(231,155,11,"#ff9b78");
+  flower(284,143,9,"#fff");
+  // 小树
+  ctx.fillStyle = "#815c40";
+  ctx.fillRect(22,94,8,40);
+  ctx.fillStyle = "#328c52";
+  ctx.beginPath();
+  ctx.arc(26,91,19,0,Math.PI*2);
+  ctx.fill();
+}
+function piecePath(x, y) {
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(x+12,y);
+  ctx.arc(x+21,y,9,Math.PI,0,true);
+  ctx.lineTo(x+S,y);
+  ctx.lineTo(x+S,y+12);
+  ctx.arc(x+S,y+21,9,-Math.PI/2,Math.PI/2,true);
+  ctx.lineTo(x+S,y+S);
+  ctx.lineTo(x,y+S);
+  ctx.closePath();
 }
 function draw() {
-  if (!loaded) return;
-  ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(img, 0, 0, W, H);
-  // 目标拼图位置
+  background();
+  // 目标轮廓
   ctx.save();
-  path(ctx, targetX, targetY);
-  ctx.globalCompositeOperation = "destination-out";
+  piecePath(targetX, 70);
+  ctx.fillStyle = "#ffffff99";
   ctx.fill();
-  ctx.restore();
-  ctx.save();
-  path(ctx, targetX, targetY);
-  ctx.strokeStyle = "white";
-  ctx.setLineDash([4, 3]);
-  ctx.lineWidth = 2;
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle = "#fff";
   ctx.stroke();
   ctx.restore();
-  // 当前滑动拼图
+  // 拼图块：从原背景中裁出相同图案
+  const piece = document.createElement("canvas");
+  piece.width = W;
+  piece.height = H;
+  const p = piece.getContext("2d");
+  p.drawImage(c,0,0);
+  // 保存原始背景用于裁剪
   ctx.save();
-  path(ctx, pieceX, targetY);
+  piecePath(pieceX,70);
   ctx.clip();
-  ctx.drawImage(img, pieceX - targetX, 0, W, H);
+  ctx.drawImage(piece,targetX-pieceX,0);
   ctx.restore();
   ctx.save();
-  path(ctx, pieceX, targetY);
-  ctx.strokeStyle = "white";
+  piecePath(pieceX,70);
+  ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
 }
-function loadImage() {
-  loaded = false;
-  verified = false;
-  go.disabled = true;
-  slider.disabled = false;
-  slider.value = 0;
-  pieceX = 0;
-  status.style.color = "#555";
-  status.textContent = "正在加载随机图片…";
-  img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    targetX = 175 + Math.random() * 45;
-    loaded = true;
-    draw();
-    status.textContent = "请拖动滑块完成拼图。";
-  };
-  img.onerror = () => {
-    status.textContent = "图片暂时无法加载，请刷新页面重试。";
-  };
-  img.src = imageURL;
+function render() {
+  // 先生成完整背景，再制作拼图块
+  background();
+  const original = document.createElement("canvas");
+  original.width = W;
+  original.height = H;
+  original.getContext("2d").drawImage(c,0,0);
+  ctx.save();
+  piecePath(targetX,70);
+  ctx.fillStyle = "#ffffff99";
+  ctx.fill();
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle = "#fff";
+  ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  piecePath(pieceX,70);
+  ctx.clip();
+  ctx.drawImage(original,pieceX-targetX,0);
+  ctx.restore();
+  ctx.save();
+  piecePath(pieceX,70);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
 }
 slider.addEventListener("input", () => {
-  if (!loaded || verified) return;
+  if (verified) return;
   pieceX = Number(slider.value);
-  draw();
-  if (Math.abs(pieceX - targetX) <= 5) {
+  render();
+  if (Math.abs(pieceX-targetX) <= 5) {
     verified = true;
     status.textContent = "OK！验证成功。";
     status.style.color = "#16803d";
-    slider.disabled = true;
     go.disabled = false;
+    slider.disabled = true;
   } else {
-    status.textContent = "请继续调整拼图位置。";
+    status.textContent = "请调整拼图位置。";
   }
 });
 go.addEventListener("click", () => {
-  if (verified && targetURL) {
-    window.location.assign(targetURL.href);
+  if (!verified) return;
+  try {
+    const url = new URL(TARGET_URL);
+    if (url.protocol = "https:" || url.protocol = "http:") {
+      window.location.href = url.href;
+    }
+  } catch {
+    status.textContent = "请设置正确的网址。";
   }
 });
-loadImage();
+render();
 </script>
 </body>
 </html>
